@@ -1,0 +1,26 @@
+---
+title: "Mainland"
+author: "Jishen Yin"
+date: "2020/2/18"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+mainland <- read.csv("data/2019_nCoV_20200121_20200206.csv") %>%
+  filter(Country.Region == "Mainland China") %>%
+  mutate(month = strsplit(as.character(Last.Update), "/| |:")[[1]][1],
+         day = strsplit(as.character(Last.Update), "/| |:")[[1]][2],
+         year = 2020,
+         hour = strsplit(as.character(Last.Update), "/| |:")[[1]][4],
+         minute = strsplit(as.character(Last.Update), "/| |:")[[1]][5]) %>%
+  select(-Country.Region, -Last.Update)
+
+colnames(mainland)[1] <- "Province"
+mainland[is.na(mainland)] <- 0
+```
+
