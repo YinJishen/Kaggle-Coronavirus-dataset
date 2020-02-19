@@ -2,7 +2,9 @@
 title: "Mainland"
 author: "Jishen Yin"
 date: "2020/2/18"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
@@ -10,17 +12,147 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
+## Load the Data and Preprocess
+
 ```{r}
-mainland <- read.csv("data/2019_nCoV_20200121_20200206.csv") %>%
-  filter(Country.Region == "Mainland China") %>%
-  mutate(month = strsplit(as.character(Last.Update), "/| |:")[[1]][1],
-         day = strsplit(as.character(Last.Update), "/| |:")[[1]][2],
-         year = 2020,
-         hour = strsplit(as.character(Last.Update), "/| |:")[[1]][4],
-         minute = strsplit(as.character(Last.Update), "/| |:")[[1]][5]) %>%
-  select(-Country.Region, -Last.Update)
+mainland <- read.csv("data/2019_nCoV_20200121_20200206.csv") %>%  ## read data
+  filter(Country.Region == "Mainland China") %>%  ## select data from mainland China
+  select(-Country.Region) ## delete country and last-update
+
+date <- strsplit(as.character(mainland$Last.Update), "/| |:")
+mainland$month <- sapply(date, function(x){as.integer(x[1])})
+mainland$day <- sapply(date, function(x){as.integer(x[2])})
+mainland$year <- rep(2020, nrow(mainland))
+mainland$hour <- sapply(date, function(x){as.integer(x[4])})
+mainland$minute <- sapply(date, function(x){as.integer(x[5])})
 
 colnames(mainland)[1] <- "Province"
-mainland[is.na(mainland)] <- 0
+
+mainland <- mainland %>%
+  mutate(Province = as.character(Province),
+         Date = as.Date(paste0(as.character(year), "-",
+                               as.character(month), "-",
+                               as.character(day)))) %>%
+  select(-Last.Update) %>%
+  arrange(desc(Date, hour))
+
+mainland[is.na(mainland)] <- 0 ## filling NA value with 0
 ```
 
+## Latest Data in each Province
+
+```{r}
+latest <- data.frame()
+for(x in unique(mainland$Province)){
+  tmp <- filter(mainland, Province == x) %>%
+    arrange(desc(Confirmed))
+  latest <- rbind(latest, tmp[1,])
+}
+
+latest <- latest %>%
+  arrange(Confirmed) %>%
+  mutate(Province = factor(Province, levels = unique(Province)))
+```
+
+```{r}
+## including Hubei Province
+ggplot(data = latest) +
+  geom_col(aes(x = Province, y = Confirmed), fill = "black") +
+  coord_flip() +
+  labs(title = "Confirmed until Feb 06, 2020 (including Hubei)",
+       y = "Confirmed") +
+  theme_light()
+```
+
+```{r}
+## Not including Hubei Province
+ggplot(data = filter(latest, Province!="Hubei")) +
+  geom_col(aes(x = Province, y = Confirmed), fill = "black") +
+  coord_flip() +
+  labs(title = "Confirmed until Feb 06, 2020 (not including Hubei)",
+       y = "Confirmed") +
+  theme_light()
+```
+
+## Changing Trend
+
+```{r}
+uniq <- data.frame()
+for(x in unique(mainland$Province)){
+  tmp <- filter(mainland, Province == x)
+  for(y in unique(tmp$Date)){
+    tmp2 <- filter(tmp, Date == y) %>%
+      arrange(desc(Confirmed))
+    uniq <- rbind(uniq, tmp2[1, ])
+  }
+}
+```
+
+```{r}
+## total amount
+total <- uniq %>%
+  group_by(Date) %>%
+  summarise(total = sum(Confirmed))
+
+ggplot(data = total) +
+  geom_line(aes(x = Date, y = total)) +
+  geom_point(aes(x = Date, y = total)) +
+  labs(title = "Total amount of confirmed in mainland China")
+```
+
+```{r}
+## trend in each province
+province <- as.character(latest$Province)
+
+part1 <- data.frame()
+for(i in 1:9){
+  part1 <- rbind(part1, filter(uniq, Province == province[i]))
+}
+
+ggplot(data = part1) +
+  geom_line(aes(x = Date, y = Confirmed)) +
+  geom_point(aes(x = Date, y = Confirmed)) +
+  facet_wrap(~Province, ncol = 3, scales = "free")
+```
+
+```{r}
+province <- as.character(latest$Province)
+
+part1 <- data.frame()
+for(i in 10:18){
+  part1 <- rbind(part1, filter(uniq, Province == province[i]))
+}
+
+ggplot(data = part1) +
+  geom_line(aes(x = Date, y = Confirmed)) +
+  geom_point(aes(x = Date, y = Confirmed)) +
+  facet_wrap(~Province, ncol = 3, scales = "free")
+```
+
+```{r}
+province <- as.character(latest$Province)
+
+part1 <- data.frame()
+for(i in 19:27){
+  part1 <- rbind(part1, filter(uniq, Province == province[i]))
+}
+
+ggplot(data = part1) +
+  geom_line(aes(x = Date, y = Confirmed)) +
+  geom_point(aes(x = Date, y = Confirmed)) +
+  facet_wrap(~Province, ncol = 3, scales = "free")
+```
+
+```{r}
+province <- as.character(latest$Province)
+
+part1 <- data.frame()
+for(i in 28:31){
+  part1 <- rbind(part1, filter(uniq, Province == province[i]))
+}
+
+ggplot(data = part1) +
+  geom_line(aes(x = Date, y = Confirmed)) +
+  geom_point(aes(x = Date, y = Confirmed)) +
+  facet_wrap(~Province, ncol = 2, scales = "free")
+```
