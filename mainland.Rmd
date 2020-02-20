@@ -92,12 +92,19 @@ for(x in unique(mainland$Province)){
 ## total amount
 total <- uniq %>%
   group_by(Date) %>%
-  summarise(total = sum(Confirmed))
+  summarise(total = sum(Confirmed)) %>%
+  mutate(num = as.integer(Date - min(Date) + 1))
+
+lm.total <- lm(total ~ num + I(num^2), data = total)
+total$pred <- predict(lm.total)
 
 ggplot(data = total) +
-  geom_line(aes(x = Date, y = total)) +
-  geom_point(aes(x = Date, y = total)) +
-  labs(title = "Total amount of confirmed in mainland China")
+  geom_line(aes(x = num, y = total)) +
+  geom_point(aes(x = num, y = total)) +
+  geom_line(aes(x = num, y = pred), colour = "red") +
+  labs(title = "Total amount of confirmed in mainland China") +
+  scale_x_discrete(limits = as.character(total$Date)) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
 ```{r}
